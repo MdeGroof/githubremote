@@ -3,6 +3,7 @@ import subprocess
 from getpass import getpass
 from pykeepass import PyKeePass
 from github import Github
+from github import Auth
 
 def run_command(cmd):
     """Run shell command and print errors if any."""
@@ -27,14 +28,16 @@ def main():
     if not entry:
         print("GitHub PAT not found in KeePass!")
         return
-    github_token = entry.password
+    github_token = entry.password.strip()
+    print(github_token)
     print("GitHub PAT retrieved successfully.")
 
     repo_name = input("Enter new GitHub repository name: ").strip()
     repo_description = input("Enter repository description (optional): ").strip()
     is_private = input("Private repository? (y/n): ").strip().lower() == "y"
 
-    gh = Github(github_token)
+    auth = Auth.Token(github_token) 
+    gh = Github(auth=auth)
     user = gh.get_user()
 
     print(f"Creating remote repository '{repo_name}' …")
@@ -47,6 +50,20 @@ def main():
 
     print("Initializing local Git repository …")
     run_command(["git", "init"])
+
+    print(f"Settng up username and password")
+    git_username = os.getenv("GIT_USERNAME")
+    git_email = os.getenv("GIT_EMAIL")
+
+    if not git_username or not git_email:
+        print("GIT_USERNAME or GIT_EMAIL environment variables not set!")
+        exit(1)
+
+    run_command(["git", "config", "user.name", git_username])
+    run_command(["git", "config", "user.email", git_email])
+
+    print(f"Add, commit and set main branch name")
+    
     run_command(["git", "add", "."])
     run_command(["git", "commit", "-m", "Initial commit"])
     run_command(["git", "branch", "-M", "main"])
@@ -56,7 +73,7 @@ def main():
     print("Pushing code to GitHub …")
     run_command(["git", "push", "-u", "origin", "main"])
 
-    print("\nAll done! Your code is on GitHub. 🎉")
+    print("\nAll done! Your code is on GitHub.")
 
 if __name__ == "__main__":
     main()
